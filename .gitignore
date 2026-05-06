@@ -1,0 +1,44 @@
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/.turbo/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Python
+backend/.venv/
+**/__pycache__/
+*.py[cod]
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+backend/.env
+!backend/.env.example
+frontend/.env.local
+!frontend/.env.example
+
+# Local databases and runtime files
+*.db
+*.sqlite
+*.sqlite3
+.run/
+backend/.run/
+.playwright-mcp/
+
+# Screenshot drafts in the repository root.
+# Curated README screenshots live in docs/screenshots/.
+/*.png
+!/docs/screenshots/*.png
+!frontend/public/**/*.png
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
