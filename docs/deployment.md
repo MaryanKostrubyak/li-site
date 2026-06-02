@@ -24,12 +24,13 @@
 ### Notes
 - Backend container command runs migrations + seed before app startup.
 - For production, run seed once, then remove seed command from compose backend command.
+- `NEXT_PUBLIC_API_URL` must be available at frontend build time. In Docker Compose this is passed through `build.args`; in other CI/CD setups export it before `npm run build`.
 
 ## 2. Split Deployment (Recommended SaaS Pattern)
 
 ### Frontend (Vercel)
 - Deploy `frontend/`
-- Set `NEXT_PUBLIC_API_URL` to backend HTTPS endpoint
+- Set `NEXT_PUBLIC_API_URL` to backend HTTPS endpoint in the project environment before building
 
 ### Backend (Render/Railway/Fly.io)
 - Deploy `backend/`
@@ -68,3 +69,4 @@
 - Add HTTPS termination and secure headers.
 - Add observability (logs, metrics, error tracking).
 - Add backups/restore policy for PostgreSQL.
+- Pin supported runtime versions in CI: Node.js `20.19+` or `22.13+`, Python `3.11+`.

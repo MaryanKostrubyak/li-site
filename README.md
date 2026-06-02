@@ -61,6 +61,13 @@ Infrastructure:
 - Docker and Docker Compose
 - Optional OpenAI, SMTP, and Telegram integrations
 
+## Runtime Requirements
+
+- Node.js `20.19+` or `22.13+`
+- npm `10+`
+- Python `3.11+`
+- Docker Desktop / Docker Engine with Compose plugin for containerized runs
+
 ## Repository Structure
 
 ```text
@@ -163,6 +170,8 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+`NEXT_PUBLIC_API_URL` is a build-time variable for Next.js. When you deploy the frontend through Docker or another CI/CD build, set it before `npm run build`, not only at container runtime.
+
 ## Environment Variables
 
 Backend variables live in `backend/.env` and should be copied from `backend/.env.example`.
@@ -204,6 +213,14 @@ npm run lint
 npm run build
 ```
 
+Verified locally on June 2, 2026:
+
+- Backend tests: `2 passed`
+- Frontend lint: passed
+- Frontend production build: passed
+- `npm audit`: high-severity Next.js advisories removed by upgrading from `16.2.4` to `16.2.7`
+- Docker Compose: configuration validated, but live container startup could not be completed because the local Docker Linux engine was unavailable
+
 ## AI and Notification Behavior
 
 - AI endpoints are usable without an OpenAI key because the service returns deterministic fallback responses.
@@ -218,6 +235,8 @@ See [docs/deployment.md](docs/deployment.md) for deployment options:
 - Single VPS Docker deployment
 - Split deployment with frontend on Vercel, backend on a Python host, and managed PostgreSQL
 - Production hardening checklist
+
+Release notes for the first public portfolio drop live in [CHANGELOG.md](CHANGELOG.md).
 
 ## What Is Intentionally Not Included
 
