@@ -4,6 +4,13 @@ Portfolio/demo full-stack web application for a fictional medical clinic. The pr
 
 > Portfolio positioning: this repository is a representative demo/case-study implementation. It is not presented as a complete client production codebase, does not include real patient data, and excludes production secrets or private business rules.
 
+## Project Links
+
+- Latest release: [v1.0.0](https://github.com/MaryanKostrubyak/li-site/releases/tag/v1.0.0)
+- Deployment guide: [docs/deployment.md](docs/deployment.md)
+- Architecture notes: [docs/architecture.md](docs/architecture.md)
+- Progress log: [docs/progress.md](docs/progress.md)
+
 ## Screenshots
 
 <p>
