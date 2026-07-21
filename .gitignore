@@ -1,7 +1,11 @@
 # Node / Next.js
 frontend/node_modules/
 frontend/.next/
+frontend/.next-release/
 frontend/.turbo/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
 frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*

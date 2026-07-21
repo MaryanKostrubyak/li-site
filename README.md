@@ -1,258 +1,109 @@
-# Aether Clinic - Booking and Patient CRM Demo
+# Aether Clinic
 
-Portfolio/demo full-stack web application for a fictional medical clinic. The project demonstrates a public booking website, role-based dashboards, patient CRM workflows, scheduling rules, notification automation, and practical AI-assisted actions.
+<p align="center">
+  <strong>Care, clearly arranged.</strong><br />
+  A full-stack clinic experience for booking, scheduling, patient care, and operations.
+</p>
 
-> Portfolio positioning: this repository is a representative demo/case-study implementation. It is not presented as a complete client production codebase, does not include real patient data, and excludes production secrets or private business rules.
+<p align="center">
+  <a href="https://maryankostrubyak.github.io/li-site/">Project overview</a> ·
+  <a href="#run-locally">Run locally</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
-## Project Links
+## What is inside
 
-- Latest release: [v1.0.0](https://github.com/MaryanKostrubyak/li-site/releases/tag/v1.0.0)
-- Deployment guide: [docs/deployment.md](docs/deployment.md)
-- Architecture notes: [docs/architecture.md](docs/architecture.md)
-- Progress log: [docs/progress.md](docs/progress.md)
+- 🗓️ A four-step booking flow with compatible doctors and live Pacific Time availability
+- 🧑‍⚕️ Focused workspaces for patients, doctors, and clinic administrators
+- 🔐 HttpOnly cookie sessions, CSRF protection, role checks, and clear status transitions
+- ⏱️ UTC storage with DST-aware clinic scheduling in `America/Los_Angeles`
+- 🧾 Patient history, rescheduling, cancellation, follow-up, internal notes, and appointment records
 
 ## Screenshots
 
-<p>
-  <img src="docs/screenshots/public-home-desktop.png" alt="Public booking website desktop view" width="49%" />
-  <img src="docs/screenshots/admin-crm-dashboard.png" alt="Admin CRM dashboard desktop view" width="49%" />
-</p>
+| Public site | Booking on mobile |
+| --- | --- |
+| ![Aether Clinic public site](docs/screenshots/public-home-desktop.png) | ![Aether Clinic booking flow](docs/screenshots/booking-flow-mobile.png) |
 
-<p>
-  <img src="docs/screenshots/patient-crm-record.png" alt="Patient CRM record desktop view" width="49%" />
-  <img src="docs/screenshots/doctor-dashboard.png" alt="Doctor dashboard desktop view" width="49%" />
-</p>
+| Clinic operations | Patient record |
+| --- | --- |
+| ![Aether Clinic operations workspace](docs/screenshots/admin-crm-dashboard.png) | ![Aether Clinic patient record](docs/screenshots/patient-crm-record.png) |
 
-<p>
-  <img src="docs/screenshots/booking-flow-mobile.png" alt="Mobile booking flow" width="32%" />
-</p>
+## Built with
 
-## Demo Scope
+- **Frontend:** Next.js, React, TypeScript, Tailwind CSS, TanStack Query
+- **Backend:** FastAPI, SQLAlchemy, Alembic, Pydantic
+- **Data:** PostgreSQL for Docker deployments, SQLite for local development and tests
+- **Quality:** Vitest, React Testing Library, Playwright, axe, ESLint
 
-This repo is designed to communicate architecture and product delivery quality:
+## Run locally
 
-- Fictional brand, demo users, generated/placeholder clinic visuals, and sample operational data
-- Public website with services, doctors, contact information, and booking calls to action
-- Appointment booking flow with service, doctor, date, slot, patient intake, and visit reason
-- JWT authentication and role-based access for `admin`, `doctor`, and `patient`
-- Admin dashboard with appointments, metrics, manual booking, patient CRM records, tags, and internal notes
-- Doctor dashboard with schedule, appointment status updates, visit notes, and AI formatting hooks
-- Patient portal with upcoming/history views, profile updates, cancellation, rescheduling, and notification preferences
-- Scheduling checks for doctor availability, service duration, overlapping appointments, cancellation, and rescheduling
-- Notification abstraction for email/Telegram-style flows with safe skipped states when providers are not configured
-- AI service layer with deterministic fallback behavior when no API key is configured
-
-## Tech Stack
-
-Frontend:
-
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- React Hook Form and Zod
-- TanStack Query
-- lucide-react icons
-
-Backend:
-
-- FastAPI
-- SQLAlchemy 2.x
-- Alembic
-- Pydantic and pydantic-settings
-- JWT auth with `python-jose`
-- APScheduler reminder task
-
-Infrastructure:
-
-- PostgreSQL target database
-- Docker and Docker Compose
-- Optional OpenAI, SMTP, and Telegram integrations
-
-## Runtime Requirements
-
-- Node.js `20.19+` or `22.13+`
-- npm `10+`
-- Python `3.11+`
-- Docker Desktop / Docker Engine with Compose plugin for containerized runs
-
-## Repository Structure
-
-```text
-.
-|-- backend/
-|   |-- alembic/
-|   |-- app/
-|   |   |-- api/v1/endpoints/
-|   |   |-- core/
-|   |   |-- db/
-|   |   |-- models/
-|   |   |-- schemas/
-|   |   |-- services/
-|   |   `-- tasks/
-|   |-- scripts/seed.py
-|   |-- tests/
-|   `-- Dockerfile
-|-- frontend/
-|   |-- app/
-|   |-- components/
-|   |-- lib/
-|   |-- public/
-|   |-- types/
-|   `-- Dockerfile
-|-- docs/
-|   |-- screenshots/
-|   |-- architecture.md
-|   |-- deployment.md
-|   `-- progress.md
-|-- docker-compose.yml
-|-- NOTICE.md
-`-- README.md
-```
-
-## Demo Credentials
-
-Use these only after running the seed script or Docker Compose seed flow.
-
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@aiclinic.demo` | `AdminPass123!` |
-| Doctor | `doctor.smith@aiclinic.demo` | `DoctorPass123!` |
-| Patient | `patient.johnson@aiclinic.demo` | `PatientPass123!` |
-
-## Quick Start with Docker
+### Docker
 
 ```powershell
 docker compose up -d --build
 ```
 
-Services:
+Open `http://localhost:3000`.
 
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8000`
-- API health check: `http://localhost:8000/health`
-- PostgreSQL: `localhost:5432`
-
-The backend container runs migrations and seeds demo data on startup.
-
-## Manual Local Setup
-
-### Backend
+### Local development
 
 ```powershell
 cd backend
 python -m venv .venv
 .\.venv\Scripts\pip install -r requirements.txt
 Copy-Item .env.example .env
+$env:DATABASE_URL='sqlite:///./clinic.db'
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m scripts.seed
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-If you run the backend outside Docker, update `backend/.env` so `DATABASE_URL` points to a reachable PostgreSQL instance, for example:
-
-```env
-DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/clinic
-```
-
-Run migrations and seed data:
-
-```powershell
-$env:PYTHONPATH='.'
-.\.venv\Scripts\alembic upgrade head
-.\.venv\Scripts\python scripts/seed.py
-```
-
-Start the API:
-
-```powershell
-$env:PYTHONPATH='.'
-.\.venv\Scripts\uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Frontend
+In a second terminal:
 
 ```powershell
 cd frontend
 npm install
-Copy-Item .env.example .env.local
+$env:BACKEND_INTERNAL_URL='http://127.0.0.1:8000'
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+### Sample access
 
-`NEXT_PUBLIC_API_URL` is a build-time variable for Next.js. When you deploy the frontend through Docker or another CI/CD build, set it before `npm run build`, not only at container runtime.
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@aetherclinic.test` | `AdminPass123!` |
+| Doctor | `amelia@aetherclinic.test` | `DoctorPass123!` |
+| Patient | `emily@aetherclinic.test` | `PatientPass123!` |
 
-## Environment Variables
+Quick access is enabled only when `DEMO_MODE=true`.
 
-Backend variables live in `backend/.env` and should be copied from `backend/.env.example`.
-
-Required for normal local operation:
-
-- `SECRET_KEY`
-- `DATABASE_URL`
-- `CORS_ORIGINS`
-- `FRONTEND_URL`
-
-Optional integrations:
-
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL`
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`
-- `TELEGRAM_BOT_TOKEN`
-
-Frontend variables live in `frontend/.env.local` and should be copied from `frontend/.env.example`.
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
-```
-
-## Quality Checks
-
-Backend tests:
+## Checks
 
 ```powershell
 cd backend
-.\.venv\Scripts\pytest
-```
+.\.venv\Scripts\python.exe -m pytest
 
-Frontend lint and production build:
-
-```powershell
-cd frontend
+cd ..\frontend
+npm run test:coverage
 npm run lint
 npm run build
+npm run test:e2e
+npm audit --audit-level=moderate
 ```
 
-Verified locally on June 2, 2026:
+## Documentation
 
-- Backend tests: `2 passed`
-- Frontend lint: passed
-- Frontend production build: passed
-- `npm audit`: high-severity Next.js advisories removed by upgrading from `16.2.4` to `16.2.7`
-- Docker Compose: configuration validated, but live container startup could not be completed because the local Docker Linux engine was unavailable
+- [Architecture](docs/architecture.md)
+- [Deployment notes](docs/deployment.md)
+- [Product notes](docs/case-study.md)
+- [Image credits](NOTICE.md)
 
-## AI and Notification Behavior
+## Contributing
 
-- AI endpoints are usable without an OpenAI key because the service returns deterministic fallback responses.
-- AI requests are logged with success, fallback, or failed status.
-- Notification delivery is abstracted behind provider-style methods.
-- Missing SMTP or Telegram configuration records a skipped delivery state instead of breaking core booking flow.
+Issues and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) before opening a change.
 
-## Deployment Notes
+## License
 
-See [docs/deployment.md](docs/deployment.md) for deployment options:
-
-- Single VPS Docker deployment
-- Split deployment with frontend on Vercel, backend on a Python host, and managed PostgreSQL
-- Production hardening checklist
-
-Release notes for the first public portfolio drop live in [CHANGELOG.md](CHANGELOG.md).
-
-## What Is Intentionally Not Included
-
-- Real patient or clinic data
-- Production credentials, tokens, or private `.env` files
-- Client-specific proprietary business rules
-- Full regulated medical compliance program
-- Payment processing, billing, or insurance workflows
-
-## License / Reuse
-
-This repository is published for portfolio review and demonstration. See [NOTICE.md](NOTICE.md) for scope and reuse notes.
+Distributed under the [MIT License](LICENSE).

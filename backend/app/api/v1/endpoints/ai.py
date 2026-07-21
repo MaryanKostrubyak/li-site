@@ -8,7 +8,9 @@ from app.models.enums import AIRequestFeature
 from app.schemas.ai import AIClassificationResponse, AIFollowUpRequest, AITextRequest, AITextResponse
 from app.services.ai_service import ai_service
 
-router = APIRouter(prefix='/ai', tags=['ai'])
+from app.core.deps import verify_csrf
+
+router = APIRouter(prefix='/ai', tags=['ai'], dependencies=[Depends(verify_csrf)])
 
 
 @router.post('/summarize-booking', response_model=AITextResponse)

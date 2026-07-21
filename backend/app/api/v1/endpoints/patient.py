@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_role
+from app.core.deps import require_role, verify_csrf
 from app.db.session import get_db
 from app.models.appointment import Appointment
 from app.models.enums import AppointmentStatus, UserRole
@@ -61,7 +61,7 @@ def get_profile(
     return current_user.patient_profile
 
 
-@router.patch('/profile', response_model=PatientProfileOut)
+@router.patch('/profile', response_model=PatientProfileOut, dependencies=[Depends(verify_csrf)])
 def update_profile(
     payload: PatientProfileUpdate,
     db: Annotated[Session, Depends(get_db)],

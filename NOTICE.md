@@ -1,7 +1,11 @@
-# Portfolio Demo Notice
+# Image credits
 
-This repository is a portfolio/demo case study for a fictional clinic product. It is intended to show product thinking, full-stack implementation structure, UI workflows, and integration patterns.
+This repository includes stock images from Pexels under the [Pexels License](https://www.pexels.com/license/).
 
-It is not a client production repository and does not contain real patient records, production credentials, private business logic, or deployment secrets. Demo accounts, screenshots, contact details, and clinic data are fictional or generated for presentation purposes.
+| Asset | Source | Photographer |
+| --- | --- | --- |
+| Clinic interior | [Pexels 7016405](https://www.pexels.com/photo/interior-design-of-a-medical-clinic-7016405/) | Enis Mekic |
+| Amelia profile | [Pexels 5234464](https://www.pexels.com/photo/5234464/) | Polina Tankilevitch |
+| Farid profile | [Pexels 26886760](https://www.pexels.com/photo/26886760/) | Contributor details are available on the source page |
 
-No open-source or commercial reuse license is granted unless a separate license is added later.
+The people pictured are not affiliated with Aether Clinic and do not endorse this project. Names, biographies, and roles are product content created for the application.

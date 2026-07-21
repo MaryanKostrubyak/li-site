@@ -18,7 +18,7 @@
 - [x] SQLAlchemy models
 - [x] Alembic migration
 - [x] JWT auth + RBAC
-- [x] Seed script + demo users
+- [x] Seed script + sample users
 
 ### Phase 4 - Frontend Foundation
 - [x] Next.js app shell

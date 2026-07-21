@@ -1,99 +1,47 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { ArrowRight, KeyRound, ShieldCheck } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import type { UserRole } from '@/types/api';
 
-const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8)
-});
-
-type LoginValues = z.infer<typeof schema>;
-
-const demoAccounts = [
-  ['Адмін', 'admin@aiclinic.demo', 'AdminPass123!'],
-  ['Лікар', 'doctor.smith@aiclinic.demo', 'DoctorPass123!'],
-  ['Пацієнт', 'patient.johnson@aiclinic.demo', 'PatientPass123!']
-] as const;
+const roles: Array<{ role: UserRole; title: string; description: string }> = [
+  { role: 'patient', title: 'Patient', description: 'Appointments, history, and preferences' },
+  { role: 'doctor', title: 'Doctor', description: 'Today’s visits, notes, and schedule' },
+  { role: 'admin', title: 'Admin', description: 'Operations, appointments, and patients' }
+];
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
-
-  const form = useForm<LoginValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      email: 'admin@aiclinic.demo',
-      password: 'AdminPass123!'
-    }
-  });
-
-  const mutation = useMutation({
-    mutationFn: api.login,
-    onSuccess: async (payload) => {
-      await login(payload.access_token);
-      router.push(`/dashboard/${payload.role}`);
-    }
-  });
+  const { login, demoLogin } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const signIn = useMutation({ mutationFn: () => login({ email, password }), onSuccess: (session) => router.push(`/dashboard/${session.user.role}`) });
+  const quickAccess = useMutation({ mutationFn: (role: UserRole) => demoLogin(role), onSuccess: (session) => router.push(`/dashboard/${session.user.role}`) });
 
   return (
-    <div className='mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr,420px] lg:items-stretch'>
-      <section className='ink-panel p-6 sm:p-8 lg:p-10'>
-        <ShieldCheck className='size-6 text-white/70' />
-        <h1 className='mt-6 font-display text-5xl font-semibold leading-none tracking-tight'>Увійдіть у кабінет клініки.</h1>
-        <p className='mt-5 max-w-xl text-sm leading-6 text-white/70 sm:text-base'>
-          Оберіть демо-роль, щоб переглянути кабінет адміністратора, лікаря або пацієнта без створення зовнішніх
-          акаунтів.
-        </p>
-
-        <div className='mt-10 divide-y divide-white/10 border-y border-white/10'>
-          {demoAccounts.map(([role, email, password]) => (
-            <button
-              key={role}
-              type='button'
-              className='grid w-full gap-2 py-4 text-left transition hover:bg-white/[0.04] sm:grid-cols-[100px,1fr]'
-              onClick={() => form.reset({ email, password })}
-            >
-              <span className='text-xs font-semibold uppercase tracking-[0.16em] text-white/45'>{role}</span>
-              <span className='min-w-0 text-sm text-white/78'>
-                <strong className='font-semibold text-white'>{email}</strong>
-                <span className='mx-2 text-white/25'>/</span>
-                <span>{password}</span>
-              </span>
-            </button>
-          ))}
+    <div className='grid gap-12 lg:grid-cols-[1fr,0.9fr]'>
+      <section>
+        <p className='kicker'>Quick access</p><h1 className='page-title mt-4'>Choose a role and get to work.</h1>
+        <p className='page-subtitle'>Open the workspace that fits the way you use the clinic.</p>
+        <div className='mt-8 divide-y divide-border border-y border-border'>
+          {roles.map((item) => <button key={item.role} type='button' onClick={() => quickAccess.mutate(item.role)} disabled={quickAccess.isPending} className='grid w-full gap-2 py-5 text-left hover:pl-2 focus-ring sm:grid-cols-[120px,1fr]'><strong>{item.title}</strong><span className='text-sm text-muted-foreground'>{item.description}</span></button>)}
         </div>
+        {quickAccess.error ? <Alert variant='danger' className='mt-5'>{quickAccess.error.message}</Alert> : null}
       </section>
-
-      <section className='soft-panel p-6 sm:p-8'>
-        <KeyRound className='size-5 text-primary' />
-        <h2 className='mt-5 font-display text-3xl font-semibold tracking-tight'>Вхід</h2>
-        <p className='mt-2 text-sm leading-6 text-muted-foreground'>Демо-акаунт адміністратора вже підставлено.</p>
-
-        <form className='mt-8 space-y-5' onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
-          <div className='space-y-2'>
-            <label className='field-label'>Email</label>
-            <Input type='email' {...form.register('email')} />
-          </div>
-          <div className='space-y-2'>
-            <label className='field-label'>Пароль</label>
-            <Input type='password' {...form.register('password')} />
-          </div>
-          <Button type='submit' className='w-full' disabled={mutation.isPending}>
-            {mutation.isPending ? 'Входимо...' : 'Увійти'}
-            <ArrowRight className='size-4' />
-          </Button>
-          {mutation.error ? <Alert variant='danger'>{(mutation.error as Error).message}</Alert> : null}
+      <section className='surface p-6 sm:p-8'>
+        <h2 className='font-display text-3xl'>Sign in</h2><p className='mt-2 text-sm text-muted-foreground'>Use an existing patient or staff account.</p>
+        <form className='mt-7 space-y-5' onSubmit={(event) => { event.preventDefault(); signIn.mutate(); }}>
+          <div><label className='field-label' htmlFor='login-email'>Email</label><Input id='login-email' className='mt-2' type='email' value={email} onChange={(event) => setEmail(event.target.value)} required /></div>
+          <div><label className='field-label' htmlFor='login-password'>Password</label><Input id='login-password' className='mt-2' type='password' value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} /></div>
+          <Button type='submit' className='w-full' disabled={signIn.isPending}>Sign in <ArrowRight className='size-4' /></Button>
+          {signIn.error ? <Alert variant='danger'>{signIn.error.message}</Alert> : null}
         </form>
       </section>
     </div>

@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
@@ -45,6 +47,27 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+
+@app.exception_handler(HTTPException)
+async def http_error_handler(_: Request, exc: HTTPException) -> JSONResponse:
+    if isinstance(exc.detail, dict) and 'code' in exc.detail:
+        payload = exc.detail
+    else:
+        payload = {'code': 'request_failed', 'message': str(exc.detail)}
+    return JSONResponse(status_code=exc.status_code, content=payload, headers=exc.headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    field_errors: dict[str, list[str]] = {}
+    for error in exc.errors():
+        field = '.'.join(str(part) for part in error['loc'] if part not in {'body', 'query', 'path'}) or 'request'
+        field_errors.setdefault(field, []).append(error['msg'])
+    return JSONResponse(
+        status_code=422,
+        content={'code': 'validation_error', 'message': 'Check the highlighted fields.', 'field_errors': field_errors},
+    )
 
 
 @app.get('/health')

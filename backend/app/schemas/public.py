@@ -18,6 +18,8 @@ class ServiceOut(ORMModel):
 class DoctorOut(BaseModel):
     id: str
     user_id: str
+    slug: str
+    service_ids: list[str]
     full_name: str
     specialty: str
     bio: str

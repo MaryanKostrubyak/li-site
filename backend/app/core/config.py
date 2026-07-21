@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
 
-    project_name: str = 'AI Clinic Booking & Patient CRM Platform'
+    project_name: str = 'Aether Clinic API'
     api_v1_prefix: str = '/api/v1'
 
     secret_key: str = 'change-me-secret-key'
@@ -20,7 +20,17 @@ class Settings(BaseSettings):
     frontend_url: str = 'http://localhost:3000'
     cors_origins: str = 'http://localhost:3000'
 
-    app_timezone: str = 'UTC'
+    app_timezone: str = 'America/Los_Angeles'
+    clinic_timezone: str = 'America/Los_Angeles'
+    demo_mode: bool = True
+    session_cookie_name: str = 'clinic_session'
+    csrf_cookie_name: str = 'clinic_csrf'
+    cookie_secure: bool = False
+    environment: str = 'development'
+
+    @property
+    def secure_cookies(self) -> bool:
+        return self.cookie_secure or self.environment.lower() == 'production'
 
     openai_api_key: Optional[str] = None
     openai_model: str = 'gpt-4.1-mini'

@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -14,249 +14,230 @@ from app.models.patient_profile import PatientProfile
 from app.models.patient_tag import PatientTag
 from app.models.service import Service
 from app.models.user import User
+from app.services.scheduling import CLINIC_ZONE, clinic_local_to_utc, clinic_today
 
 
 def ensure_user(db, email: str, full_name: str, role: UserRole, password: str, phone: str | None = None) -> User:
     user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
-    if user:
-        return user
-    user = User(
-        email=email,
-        full_name=full_name,
-        password_hash=get_password_hash(password),
-        role=role,
-        phone=phone,
-    )
-    db.add(user)
+    if not user:
+        user = User(email=email, password_hash=get_password_hash(password), role=role)
+        db.add(user)
+    user.full_name = full_name
+    user.phone = phone
+    user.is_active = True
     db.flush()
     return user
+
+
+def ensure_service(db, *, name: str, slug: str, description: str, duration: int, price: str) -> Service:
+    service = db.execute(select(Service).where(Service.slug == slug)).scalar_one_or_none()
+    if not service:
+        service = Service(slug=slug)
+        db.add(service)
+    service.name = name
+    service.description = description
+    service.duration_minutes = duration
+    service.price = Decimal(price)
+    service.is_active = True
+    db.flush()
+    return service
+
+
+def ensure_doctor(db, user: User, *, slug: str, specialty: str, bio: str, years: int, fee: str) -> DoctorProfile:
+    doctor = db.execute(select(DoctorProfile).where(DoctorProfile.user_id == user.id)).scalar_one_or_none()
+    if not doctor:
+        doctor = DoctorProfile(user_id=user.id)
+        db.add(doctor)
+    doctor.slug = slug
+    doctor.specialty = specialty
+    doctor.bio = bio
+    doctor.years_experience = years
+    doctor.consultation_fee = Decimal(fee)
+    doctor.is_accepting_new_patients = True
+    db.flush()
+    return doctor
+
+
+def ensure_patient(db, user: User, lead_source: str, follow_up: FollowUpStatus) -> PatientProfile:
+    patient = db.execute(select(PatientProfile).where(PatientProfile.user_id == user.id)).scalar_one_or_none()
+    if not patient:
+        patient = PatientProfile(user_id=user.id)
+        db.add(patient)
+    patient.lead_source = lead_source
+    patient.follow_up_status = follow_up
+    patient.notification_email_enabled = True
+    patient.notification_telegram_enabled = False
+    db.flush()
+    return patient
+
+
+def next_clinic_weekday(weekday: int, weeks: int = 0) -> datetime:
+    today = clinic_today()
+    days = (weekday - today.weekday()) % 7
+    target = today + timedelta(days=days + weeks * 7)
+    return datetime.combine(target, time(10), tzinfo=CLINIC_ZONE)
+
+
+def ensure_appointment(
+    db,
+    *,
+    code: str,
+    patient: PatientProfile,
+    doctor: DoctorProfile,
+    service: Service,
+    start_local: datetime,
+    status: AppointmentStatus,
+    reason: str,
+) -> Appointment:
+    appointment = db.execute(select(Appointment).where(Appointment.reference_code == code)).scalar_one_or_none()
+    if not appointment:
+        appointment = Appointment(reference_code=code)
+        db.add(appointment)
+    start_at = clinic_local_to_utc(start_local)
+    appointment.patient_id = patient.id
+    appointment.doctor_id = doctor.id
+    appointment.service_id = service.id
+    appointment.start_at = start_at
+    appointment.end_at = start_at + timedelta(minutes=service.duration_minutes)
+    appointment.status = status
+    appointment.reason = reason
+    appointment.source_channel = 'website'
+    appointment.issue_summary = 'Visit summary generated from the booking details.'
+    appointment.issue_classification = 'routine'
+    return appointment
 
 
 def run() -> None:
     db = SessionLocal()
     try:
-        if db.execute(select(Service.id)).first():
-            print('Seed skipped: data already exists.')
-            return
+        for user in db.execute(select(User)).scalars():
+            if user.email.endswith('@aiclinic.demo') or user.email.endswith('@aetherclinic.demo'):
+                user.email = f'{user.email.split("@", 1)[0]}@aetherclinic.test'
 
-        admin = ensure_user(db, 'admin@aiclinic.demo', 'Olivia Carter', UserRole.admin, 'AdminPass123!')
-
-        doctor_user_1 = ensure_user(
-            db,
-            'doctor.smith@aiclinic.demo',
-            'Dr. Amelia Smith',
-            UserRole.doctor,
-            'DoctorPass123!',
-            '+1-202-555-0101',
+        admin = ensure_user(db, 'admin@aetherclinic.test', 'Olivia Carter', UserRole.admin, 'AdminPass123!')
+        amelia_user = ensure_user(
+            db, 'amelia@aetherclinic.test', 'Dr. Amelia Smith', UserRole.doctor, 'DoctorPass123!', '+1 415 555 0101'
         )
-        doctor_user_2 = ensure_user(
-            db,
-            'doctor.khan@aiclinic.demo',
-            'Dr. Farid Khan',
-            UserRole.doctor,
-            'DoctorPass123!',
-            '+1-202-555-0102',
+        farid_user = ensure_user(
+            db, 'farid@aetherclinic.test', 'Dr. Farid Khan', UserRole.doctor, 'DoctorPass123!', '+1 415 555 0102'
+        )
+        emily_user = ensure_user(
+            db, 'emily@aetherclinic.test', 'Emily Johnson', UserRole.patient, 'PatientPass123!', '+1 415 555 0191'
+        )
+        daniel_user = ensure_user(
+            db, 'daniel@aetherclinic.test', 'Daniel Lee', UserRole.patient, 'PatientPass123!', '+1 415 555 0192'
         )
 
-        patient_user_1 = ensure_user(
+        amelia = ensure_doctor(
             db,
-            'patient.johnson@aiclinic.demo',
-            'Emily Johnson',
-            UserRole.patient,
-            'PatientPass123!',
-            '+1-202-555-0191',
+            amelia_user,
+            slug='amelia-smith',
+            specialty='Primary Care',
+            bio='Thoughtful preventive care and support for everyday health concerns.',
+            years=11,
+            fee='120.00',
         )
-        patient_user_2 = ensure_user(
+        farid = ensure_doctor(
             db,
-            'patient.lee@aiclinic.demo',
-            'Daniel Lee',
-            UserRole.patient,
-            'PatientPass123!',
-            '+1-202-555-0192',
-        )
-
-        doctor_1 = DoctorProfile(
-            user_id=doctor_user_1.id,
-            specialty='General Medicine',
-            bio='Specialist in preventive care and chronic condition management.',
-            years_experience=11,
-            consultation_fee=Decimal('120.00'),
-            is_accepting_new_patients=True,
-        )
-        doctor_2 = DoctorProfile(
-            user_id=doctor_user_2.id,
+            farid_user,
+            slug='farid-khan',
             specialty='Cardiology',
-            bio='Cardiologist focused on diagnostics, hypertension, and follow-up treatment plans.',
-            years_experience=14,
-            consultation_fee=Decimal('180.00'),
-            is_accepting_new_patients=True,
+            bio='Clear, collaborative follow-up care for heart health and blood pressure.',
+            years=14,
+            fee='180.00',
         )
-        db.add_all([doctor_1, doctor_2])
-        db.flush()
+        emily = ensure_patient(db, emily_user, 'website', FollowUpStatus.needed)
+        daniel = ensure_patient(db, daniel_user, 'referral', FollowUpStatus.scheduled)
 
-        patient_1 = PatientProfile(
-            user_id=patient_user_1.id,
-            lead_source='google_ads',
-            follow_up_status=FollowUpStatus.needed,
-            notification_email_enabled=True,
-            notification_telegram_enabled=False,
+        consultation = ensure_service(
+            db,
+            name='General Consultation',
+            slug='general-consultation',
+            description='A focused visit for symptoms, questions, and a practical care plan.',
+            duration=30,
+            price='79.00',
         )
-        patient_2 = PatientProfile(
-            user_id=patient_user_2.id,
-            lead_source='referral',
-            follow_up_status=FollowUpStatus.scheduled,
-            notification_email_enabled=True,
-            notification_telegram_enabled=False,
+        cardiology = ensure_service(
+            db,
+            name='Cardiology Follow-Up',
+            slug='cardiology-follow-up',
+            description='Review blood pressure, symptoms, medication, and next steps.',
+            duration=45,
+            price='129.00',
         )
-        db.add_all([patient_1, patient_2])
-        db.flush()
+        checkup = ensure_service(
+            db,
+            name='Annual Checkup',
+            slug='annual-checkup',
+            description='A complete yearly health review with a prevention plan.',
+            duration=60,
+            price='199.00',
+        )
+        amelia.services = [consultation, checkup]
+        farid.services = [cardiology]
 
-        services = [
-            Service(
-                name='General Consultation',
-                slug='general-consultation',
-                description='Comprehensive consultation for common symptoms and preventive care.',
-                duration_minutes=30,
-                price=Decimal('79.00'),
-                is_active=True,
-            ),
-            Service(
-                name='Cardiology Follow-Up',
-                slug='cardiology-follow-up',
-                description='Follow-up appointment with blood pressure and treatment plan review.',
-                duration_minutes=45,
-                price=Decimal('129.00'),
-                is_active=True,
-            ),
-            Service(
-                name='Full Annual Checkup',
-                slug='annual-checkup',
-                description='Detailed yearly health checkup and personalized prevention plan.',
-                duration_minutes=60,
-                price=Decimal('199.00'),
-                is_active=True,
-            ),
-        ]
-        db.add_all(services)
-        db.flush()
+        for doctor in (amelia, farid):
+            existing = {(row.weekday, row.start_time) for row in doctor.availabilities}
+            for weekday in range(5):
+                start = time(9 if doctor is amelia else 10)
+                if (weekday, start) not in existing:
+                    db.add(
+                        AvailabilitySchedule(
+                            doctor_id=doctor.id,
+                            weekday=weekday,
+                            start_time=start,
+                            end_time=time(17 if doctor is amelia else 18),
+                            slot_interval_minutes=30,
+                            is_active=True,
+                        )
+                    )
 
-        availability_rows = []
-        for weekday in [0, 1, 2, 3, 4]:
-            availability_rows.append(
-                AvailabilitySchedule(
-                    doctor_id=doctor_1.id,
-                    weekday=weekday,
-                    start_time=time(9, 0),
-                    end_time=time(17, 0),
-                    slot_interval_minutes=30,
-                    is_active=True,
-                )
-            )
-            availability_rows.append(
-                AvailabilitySchedule(
-                    doctor_id=doctor_2.id,
-                    weekday=weekday,
-                    start_time=time(10, 0),
-                    end_time=time(18, 0),
-                    slot_interval_minutes=30,
-                    is_active=True,
-                )
-            )
-        db.add_all(availability_rows)
-
-        now = datetime.now(UTC)
-        today_morning = now.replace(hour=9, minute=30, second=0, microsecond=0)
-
-        appointments = [
-            Appointment(
-                patient_id=patient_1.id,
-                doctor_id=doctor_1.id,
-                service_id=services[0].id,
-                status=AppointmentStatus.confirmed,
-                start_at=now + timedelta(days=1, hours=2),
-                end_at=now + timedelta(days=1, hours=2, minutes=30),
-                reason='Recurring headaches and fatigue over the last week.',
-                source_channel='website',
-                issue_summary='Patient reports recurring headaches with fatigue.',
-                issue_classification='routine',
-            ),
-            Appointment(
-                patient_id=patient_2.id,
-                doctor_id=doctor_2.id,
-                service_id=services[1].id,
-                status=AppointmentStatus.new,
-                start_at=now + timedelta(days=2, hours=1),
-                end_at=now + timedelta(days=2, hours=1, minutes=45),
-                reason='Blood pressure follow-up and medication adjustment review.',
-                source_channel='referral',
-                issue_summary='Follow-up for blood pressure management.',
-                issue_classification='follow-up',
-            ),
-            Appointment(
-                patient_id=patient_1.id,
-                doctor_id=doctor_1.id,
-                service_id=services[2].id,
-                status=AppointmentStatus.completed,
-                start_at=now - timedelta(days=14),
-                end_at=now - timedelta(days=14) + timedelta(minutes=60),
-                reason='Annual wellness exam and blood panel discussion.',
-                source_channel='website',
-                issue_summary='Annual preventive care visit completed.',
-                issue_classification='consultation',
-            ),
-            Appointment(
-                patient_id=patient_2.id,
-                doctor_id=doctor_2.id,
-                service_id=services[1].id,
-                status=AppointmentStatus.canceled,
-                start_at=today_morning - timedelta(days=3),
-                end_at=today_morning - timedelta(days=3) + timedelta(minutes=45),
-                reason='Canceled by patient due to travel.',
-                source_channel='phone',
-                issue_summary='Canceled appointment.',
-                issue_classification='follow-up',
-                canceled_at=now - timedelta(days=4),
-            ),
-            Appointment(
-                patient_id=patient_1.id,
-                doctor_id=doctor_1.id,
-                service_id=services[0].id,
-                status=AppointmentStatus.no_show,
-                start_at=now - timedelta(days=7, hours=1),
-                end_at=now - timedelta(days=7, minutes=30),
-                reason='Missed consultation without notice.',
-                source_channel='website',
-                issue_summary='No-show recorded.',
-                issue_classification='routine',
-            ),
-        ]
-        db.add_all(appointments)
-
-        db.add_all(
-            [
-                PatientTag(patient_id=patient_1.id, tag='high-value'),
-                PatientTag(patient_id=patient_1.id, tag='follow-up-needed'),
-                PatientTag(patient_id=patient_2.id, tag='cardio'),
-            ]
+        ensure_appointment(
+            db,
+            code='AET-DEMO01',
+            patient=emily,
+            doctor=amelia,
+            service=consultation,
+            start_local=next_clinic_weekday(0, 1),
+            status=AppointmentStatus.confirmed,
+            reason='Recurring headaches and fatigue over the last week.',
+        )
+        ensure_appointment(
+            db,
+            code='AET-DEMO02',
+            patient=daniel,
+            doctor=farid,
+            service=cardiology,
+            start_local=next_clinic_weekday(1, 1),
+            status=AppointmentStatus.new,
+            reason='Blood pressure follow-up and medication review.',
+        )
+        ensure_appointment(
+            db,
+            code='AET-DEMO03',
+            patient=emily,
+            doctor=amelia,
+            service=checkup,
+            start_local=next_clinic_weekday(2, -2),
+            status=AppointmentStatus.completed,
+            reason='Annual wellness exam and prevention planning.',
         )
 
-        db.add_all(
-            [
+        if not emily.tags:
+            db.add_all([PatientTag(patient_id=emily.id, tag='follow-up-needed'), PatientTag(patient_id=emily.id, tag='morning')])
+        if not daniel.tags:
+            db.add(PatientTag(patient_id=daniel.id, tag='cardiology'))
+        if not emily.internal_notes:
+            db.add(
                 PatientInternalNote(
-                    patient_id=patient_1.id,
+                    patient_id=emily.id,
                     admin_id=admin.id,
                     note='Patient prefers early morning appointments when available.',
-                ),
-                PatientInternalNote(
-                    patient_id=patient_2.id,
-                    admin_id=admin.id,
-                    note='Lead from physician referral partner clinic.',
-                ),
-            ]
-        )
+                )
+            )
 
         db.commit()
-        print('Seed complete.')
+        print('Sample clinic data is up to date.')
     finally:
         db.close()
 

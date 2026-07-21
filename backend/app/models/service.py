@@ -18,3 +18,4 @@ class Service(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     appointments = relationship('Appointment', back_populates='service')
+    doctors = relationship('DoctorProfile', secondary='doctor_services', back_populates='services')

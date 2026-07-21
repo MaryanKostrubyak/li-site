@@ -15,21 +15,23 @@ class PatientProfileOut(BaseModel):
     address: str | None
     emergency_contact: str | None
     lead_source: str | None
-    follow_up_status: FollowUpStatus
     notification_email_enabled: bool
     notification_telegram_enabled: bool
-    telegram_chat_id: str | None
 
 
 class PatientProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
     date_of_birth: date | None = None
     gender: str | None = Field(default=None, max_length=50)
     address: str | None = Field(default=None, max_length=500)
     emergency_contact: str | None = Field(default=None, max_length=255)
-    follow_up_status: FollowUpStatus | None = None
     notification_email_enabled: bool | None = None
     notification_telegram_enabled: bool | None = None
-    telegram_chat_id: str | None = Field(default=None, max_length=100)
+
+
+class AdminPatientUpdate(BaseModel):
+    follow_up_status: FollowUpStatus
 
 
 class PatientSummary(BaseModel):
