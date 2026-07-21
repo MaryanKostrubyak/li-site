@@ -1,4 +1,5 @@
 from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
@@ -6,6 +7,12 @@ from sqlalchemy.orm import Session
 from app.models.appointment import Appointment
 from app.models.availability_schedule import AvailabilitySchedule
 from app.models.enums import AppointmentStatus
+from app.models.doctor_profile import DoctorProfile
+from app.models.service import Service
+from app.core.config import get_settings
+
+settings = get_settings()
+CLINIC_ZONE = ZoneInfo(settings.clinic_timezone)
 
 
 class SchedulingError(Exception):
@@ -18,6 +25,20 @@ class BookingConflictError(SchedulingError):
 
 class SlotUnavailableError(SchedulingError):
     pass
+
+
+def utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def clinic_local_to_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=CLINIC_ZONE)
+    return value.astimezone(UTC)
+
+
+def clinic_today(now: datetime | None = None) -> date:
+    return (now or utc_now()).astimezone(CLINIC_ZONE).date()
 
 
 def to_utc(dt: datetime) -> datetime:
@@ -54,14 +75,16 @@ def _is_within_availability(
     end_at: datetime,
     availabilities: list[AvailabilitySchedule],
 ) -> bool:
-    weekday = start_at.weekday()
+    local_start = start_at.astimezone(CLINIC_ZONE)
+    local_end = end_at.astimezone(CLINIC_ZONE)
+    weekday = local_start.weekday()
 
     for schedule in availabilities:
         if not schedule.is_active or schedule.weekday != weekday:
             continue
-        schedule_start = datetime.combine(start_at.date(), schedule.start_time, tzinfo=UTC)
-        schedule_end = datetime.combine(start_at.date(), schedule.end_time, tzinfo=UTC)
-        if start_at >= schedule_start and end_at <= schedule_end:
+        schedule_start = datetime.combine(local_start.date(), schedule.start_time, tzinfo=CLINIC_ZONE)
+        schedule_end = datetime.combine(local_start.date(), schedule.end_time, tzinfo=CLINIC_ZONE)
+        if local_start >= schedule_start and local_end <= schedule_end:
             return True
     return False
 
@@ -91,6 +114,28 @@ def validate_slot_available(
     return end_at
 
 
+def validate_booking_slot(
+    db: Session,
+    doctor: DoctorProfile,
+    service: Service,
+    start_at: datetime,
+    exclude_appointment_id: str | None = None,
+) -> datetime:
+    if not doctor.is_accepting_new_patients:
+        raise SlotUnavailableError('Doctor is not accepting appointments')
+    if service not in doctor.services:
+        raise SlotUnavailableError('Doctor does not offer the selected service')
+    if to_utc(start_at) < utc_now():
+        raise SlotUnavailableError('Selected time is in the past')
+    return validate_slot_available(
+        db,
+        doctor_id=doctor.id,
+        start_at=start_at,
+        duration_minutes=service.duration_minutes,
+        exclude_appointment_id=exclude_appointment_id,
+    )
+
+
 def list_available_slots(
     db: Session,
     doctor_id: str,
@@ -107,8 +152,8 @@ def list_available_slots(
     if not schedules:
         return []
 
-    day_start = datetime.combine(target_date, time(0, 0), tzinfo=UTC)
-    day_end = day_start + timedelta(days=1)
+    day_start = datetime.combine(target_date, time(0, 0), tzinfo=CLINIC_ZONE).astimezone(UTC)
+    day_end = datetime.combine(target_date + timedelta(days=1), time(0, 0), tzinfo=CLINIC_ZONE).astimezone(UTC)
 
     booked_stmt = select(Appointment).where(
         Appointment.doctor_id == doctor_id,
@@ -120,8 +165,8 @@ def list_available_slots(
 
     slots: list[tuple[datetime, datetime]] = []
     for schedule in schedules:
-        cursor = datetime.combine(target_date, schedule.start_time, tzinfo=UTC)
-        window_end = datetime.combine(target_date, schedule.end_time, tzinfo=UTC)
+        cursor = datetime.combine(target_date, schedule.start_time, tzinfo=CLINIC_ZONE).astimezone(UTC)
+        window_end = datetime.combine(target_date, schedule.end_time, tzinfo=CLINIC_ZONE).astimezone(UTC)
 
         while cursor + timedelta(minutes=service_duration_minutes) <= window_end:
             candidate_end = cursor + timedelta(minutes=service_duration_minutes)
@@ -131,7 +176,7 @@ def list_available_slots(
                 and appt.status != AppointmentStatus.canceled
                 for appt in booked
             )
-            if not overlaps and cursor >= datetime.now(UTC):
+            if not overlaps and cursor >= utc_now():
                 slots.append((cursor, candidate_end))
             cursor += timedelta(minutes=schedule.slot_interval_minutes)
 

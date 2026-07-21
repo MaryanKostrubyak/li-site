@@ -22,7 +22,7 @@ export default function DashboardIndexPage() {
 
   return (
     <div className='workspace-max page-y'>
-      <div className='dashboard-panel px-5 py-6 text-sm text-muted-foreground'>Переходимо до вашого кабінету...</div>
+      <div className='dashboard-panel px-5 py-6 text-sm text-muted-foreground'>Opening your portal…</div>
     </div>
   );
 }

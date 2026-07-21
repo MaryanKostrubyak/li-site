@@ -1,9 +1,10 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import AppointmentStatus
+from app.schemas.common import ClinicEmail
 
 
 class AppointmentOut(BaseModel):
@@ -22,12 +23,52 @@ class AppointmentOut(BaseModel):
     issue_classification: str | None = None
 
 
+class AppointmentCreateRequest(BaseModel):
+    service_id: str
+    doctor_id: str
+    start_at: datetime
+    reason: str = Field(min_length=5, max_length=3000)
+
+
+class DoctorSummary(BaseModel):
+    id: str
+    name: str
+    specialty: str
+
+
+class ServiceSummary(BaseModel):
+    id: str
+    name: str
+    duration_minutes: int
+    price: Decimal
+
+
+class PatientSummaryOut(BaseModel):
+    id: str
+    name: str
+    email: ClinicEmail
+
+
+class PatientAppointmentOut(BaseModel):
+    id: str
+    reference_code: str
+    status: AppointmentStatus
+    start_at: datetime
+    end_at: datetime
+    reason: str
+    issue_summary: str | None = None
+    issue_classification: str | None = None
+    rescheduled_from_appointment_id: str | None = None
+    doctor: DoctorSummary
+    service: ServiceSummary
+
+
 class PublicBookRequest(BaseModel):
     service_id: str
     doctor_id: str
     start_at: datetime
     reason: str = Field(min_length=5, max_length=3000)
-    patient_email: EmailStr
+    patient_email: ClinicEmail
     patient_full_name: str = Field(min_length=2, max_length=255)
     patient_phone: str | None = Field(default=None, max_length=50)
     source_channel: str = Field(default='website', max_length=100)
@@ -83,7 +124,16 @@ class DoctorAppointmentStatusUpdate(BaseModel):
 
 class AppointmentNoteCreate(BaseModel):
     raw_note: str = Field(min_length=3, max_length=4000)
-    use_ai_formatting: bool = True
+    formatted_note: str | None = Field(default=None, min_length=3, max_length=4000)
+
+
+class AppointmentNotePreviewRequest(BaseModel):
+    raw_note: str = Field(min_length=3, max_length=4000)
+
+
+class AppointmentNotePreviewOut(BaseModel):
+    preview: str
+    source: str
 
 
 class AppointmentNoteOut(BaseModel):
@@ -93,3 +143,16 @@ class AppointmentNoteOut(BaseModel):
     raw_note: str
     formatted_note: str
     created_at: datetime
+
+
+class DoctorAppointmentDetailOut(BaseModel):
+    id: str
+    reference_code: str
+    status: AppointmentStatus
+    start_at: datetime
+    end_at: datetime
+    reason: str
+    patient: PatientSummaryOut
+    doctor: DoctorSummary
+    service: ServiceSummary
+    notes: list[AppointmentNoteOut]

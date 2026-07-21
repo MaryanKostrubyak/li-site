@@ -34,7 +34,7 @@ export function Protected({
   if (loading || !me || (role && me.user.role !== role)) {
     return (
       <div className='workspace-max page-y'>
-        <div className='dashboard-panel px-5 py-6 text-sm text-muted-foreground'>Завантажуємо захищений кабінет...</div>
+        <div className='dashboard-panel px-5 py-6 text-sm text-muted-foreground'>Loading your secure portal…</div>
       </div>
     );
   }

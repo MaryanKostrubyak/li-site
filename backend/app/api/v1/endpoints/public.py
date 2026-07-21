@@ -1,11 +1,12 @@
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.core.errors import ApiError
 from app.models.doctor_profile import DoctorProfile
 from app.models.service import Service
 from app.models.user import User
@@ -33,6 +34,8 @@ def list_doctors(db: Annotated[Session, Depends(get_db)]) -> list[DoctorOut]:
         DoctorOut(
             id=doctor.id,
             user_id=user.id,
+            slug=doctor.slug,
+            service_ids=[service.id for service in doctor.services],
             full_name=user.full_name,
             specialty=doctor.specialty,
             bio=doctor.bio,
@@ -46,15 +49,19 @@ def list_doctors(db: Annotated[Session, Depends(get_db)]) -> list[DoctorOut]:
 
 @router.get('/doctors/{doctor_id}', response_model=DoctorOut)
 def get_doctor(doctor_id: str, db: Annotated[Session, Depends(get_db)]) -> DoctorOut:
-    stmt = select(DoctorProfile, User).join(User, User.id == DoctorProfile.user_id).where(DoctorProfile.id == doctor_id)
+    stmt = select(DoctorProfile, User).join(User, User.id == DoctorProfile.user_id).where(
+        (DoctorProfile.id == doctor_id) | (DoctorProfile.slug == doctor_id)
+    )
     row = db.execute(stmt).one_or_none()
     if not row:
-        raise HTTPException(status_code=404, detail='Doctor not found')
+        raise ApiError(status.HTTP_404_NOT_FOUND, 'doctor_not_found', 'Doctor not found.')
 
     doctor, user = row
     return DoctorOut(
         id=doctor.id,
         user_id=user.id,
+        slug=doctor.slug,
+        service_ids=[service.id for service in doctor.services],
         full_name=user.full_name,
         specialty=doctor.specialty,
         bio=doctor.bio,
@@ -73,11 +80,18 @@ def get_available_doctor_slots(
 ) -> SlotsResponse:
     doctor = db.get(DoctorProfile, doctor_id)
     if not doctor:
-        raise HTTPException(status_code=404, detail='Doctor not found')
+        raise ApiError(status.HTTP_404_NOT_FOUND, 'doctor_not_found', 'Doctor not found.')
 
     service = db.get(Service, service_id)
     if not service or not service.is_active:
-        raise HTTPException(status_code=404, detail='Service not found')
+        raise ApiError(status.HTTP_404_NOT_FOUND, 'service_not_found', 'Service not found.')
+
+    if service not in doctor.services:
+        raise ApiError(
+            status.HTTP_409_CONFLICT,
+            'doctor_service_mismatch',
+            'This doctor does not offer the selected service.',
+        )
 
     slots = list_available_slots(db, doctor_id=doctor_id, target_date=target_date, service_duration_minutes=service.duration_minutes)
     return SlotsResponse(

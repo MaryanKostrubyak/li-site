@@ -1,15 +1,27 @@
 {
-  "name": "ai-clinic-frontend",
-  "version": "1.0.0",
+  "name": "aether-clinic-frontend",
+  "version": "2.0.0",
   "private": true,
   "engines": {
     "node": ">=20.19.0 <21 || >=22.13.0"
+  },
+  "overrides": {
+    "js-yaml": "^4.1.2",
+    "postcss": "^8.5.10",
+    "minimatch@3.1.5": {
+      "brace-expansion": "1.1.16"
+    },
+    "brace-expansion@5.0.6": "5.0.7"
   },
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "screenshots": "node scripts/capture-screenshots.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -25,14 +37,24 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.55.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.10.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^3.2.6",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.16.0",
     "eslint-config-next": "^16.2.7",
-    "postcss": "^8.4.49",
+    "jsdom": "^26.1.0",
+    "msw": "^2.10.3",
+    "postcss": "^8.5.10",
     "tailwindcss": "^3.4.16",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.6"
   }
 }

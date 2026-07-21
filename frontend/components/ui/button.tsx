@@ -9,19 +9,19 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantClasses: Record<NonNullable<ButtonProps['variant']>, string> = {
   default:
-    'border border-transparent bg-primary text-primary-foreground shadow-crisp hover:bg-primary/90 focus-visible:ring-primary/30',
+    'border border-transparent bg-primary text-primary-foreground hover:bg-success focus-visible:ring-primary/30',
   secondary:
-    'border border-transparent bg-accent text-accent-foreground shadow-crisp hover:bg-accent/90 focus-visible:ring-accent/30',
+    'border border-transparent bg-accent text-accent-foreground hover:bg-accent/90 focus-visible:ring-accent/30',
   outline:
-    'border border-border/90 bg-white/70 text-foreground hover:border-primary/45 hover:bg-white focus-visible:ring-primary/20',
+    'border border-border bg-transparent text-foreground hover:border-success hover:bg-card focus-visible:ring-primary/20',
   ghost:
     'border border-transparent bg-transparent text-muted-foreground hover:bg-muted/65 hover:text-foreground focus-visible:ring-primary/20',
   danger:
-    'border border-transparent bg-danger text-white shadow-crisp hover:bg-danger/90 focus-visible:ring-danger/30',
+    'border border-transparent bg-danger text-white hover:bg-danger/90 focus-visible:ring-danger/30',
   subtle:
     'border border-border/60 bg-muted/70 text-foreground hover:bg-muted focus-visible:ring-primary/20',
   ink:
-    'border border-transparent bg-ink text-white shadow-crisp hover:bg-ink/90 focus-visible:ring-ink/25'
+    'border border-transparent bg-ink text-white hover:bg-success focus-visible:ring-ink/25'
 };
 
 const sizeClasses: Record<NonNullable<ButtonProps['size']>, string> = {

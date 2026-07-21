@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime, time, timedelta
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -11,7 +11,7 @@ from app.models.enums import AppointmentStatus, UserRole
 from app.models.patient_profile import PatientProfile
 from app.models.service import Service
 from app.models.user import User
-from app.services.scheduling import BookingConflictError, validate_slot_available
+from app.services.scheduling import BookingConflictError, clinic_local_to_utc, validate_slot_available
 
 
 def _make_session() -> Session:
@@ -52,8 +52,8 @@ def test_validate_slot_prevents_overlap() -> None:
         )
     )
 
-    start = datetime(2026, 4, 27, 10, 0, tzinfo=UTC)
-    end = start.replace(minute=30)
+    start = clinic_local_to_utc(datetime(2026, 4, 27, 10, 0))
+    end = start + timedelta(minutes=30)
     db.add(
         Appointment(
             patient_id=patient.id,
@@ -103,6 +103,6 @@ def test_validate_slot_within_availability() -> None:
     )
     db.commit()
 
-    start = datetime(2026, 4, 28, 9, 30, tzinfo=UTC)
+    start = clinic_local_to_utc(datetime(2026, 4, 28, 9, 30))
     end = validate_slot_available(db, doctor_id=doctor.id, start_at=start, duration_minutes=45)
     assert int((end - start).total_seconds() / 60) == 45

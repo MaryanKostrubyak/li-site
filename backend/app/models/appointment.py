@@ -1,4 +1,5 @@
 from datetime import datetime
+import secrets
 from typing import Optional
 
 from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
@@ -15,6 +16,13 @@ class Appointment(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     patient_id: Mapped[str] = mapped_column(ForeignKey('patient_profiles.id', ondelete='CASCADE'), nullable=False, index=True)
     doctor_id: Mapped[str] = mapped_column(ForeignKey('doctor_profiles.id', ondelete='CASCADE'), nullable=False, index=True)
     service_id: Mapped[str] = mapped_column(ForeignKey('services.id', ondelete='RESTRICT'), nullable=False)
+    reference_code: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        unique=True,
+        index=True,
+        default=lambda: f'AET-{secrets.token_hex(3).upper()}',
+    )
     status: Mapped[AppointmentStatus] = mapped_column(
         Enum(AppointmentStatus, name='appointment_status'),
         nullable=False,
@@ -28,6 +36,7 @@ class Appointment(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     issue_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     issue_classification: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     canceled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancellation_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     rescheduled_from_appointment_id: Mapped[Optional[str]] = mapped_column(
         ForeignKey('appointments.id', ondelete='SET NULL'),
         nullable=True,

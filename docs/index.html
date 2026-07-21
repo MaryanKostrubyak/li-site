@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Aether Clinic is a full-stack appointment management application." />
+    <title>Aether Clinic</title>
+    <link rel="stylesheet" href="pages.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Aether Clinic home">Aether <span>Clinic</span></a>
+      <nav aria-label="Main navigation">
+        <a href="#features">Features</a>
+        <a href="#screens">Screens</a>
+        <a href="#run">Run locally</a>
+        <a class="button button-small" href="https://github.com/MaryanKostrubyak/li-site">Source code</a>
+      </nav>
+    </header>
+    <main id="top">
+      <section class="hero">
+        <p class="eyebrow">Appointment management, thoughtfully arranged</p>
+        <h1>Care teams need fewer loose ends.</h1>
+        <p class="lede">Aether Clinic brings booking, schedules, patient records, and follow-up into focused spaces for patients, doctors, and clinic staff.</p>
+        <div class="actions">
+          <a class="button" href="#run">Run it locally</a>
+          <a class="text-link" href="#screens">See the product <span aria-hidden="true">↓</span></a>
+        </div>
+      </section>
+      <section id="features" class="section">
+        <div class="section-heading"><p class="eyebrow">Built around the day-to-day</p><h2>Clear work for every role</h2></div>
+        <div class="feature-grid">
+          <article><div class="icon" aria-hidden="true">◷</div><h3>Slot-based booking</h3><p>Patients select a compatible doctor and a real available time in Pacific Time, then receive a concise visit reference.</p></article>
+          <article><div class="icon" aria-hidden="true">⌘</div><h3>Purposeful workspaces</h3><p>Administrators, doctors, and patients each get navigation and actions that match their responsibilities.</p></article>
+          <article><div class="icon" aria-hidden="true">↺</div><h3>History that stays intact</h3><p>Rescheduling creates a linked record instead of overwriting the original appointment. Cancellations stay separate from visit reasons.</p></article>
+          <article><div class="icon" aria-hidden="true">✓</div><h3>Guarded access</h3><p>Same-origin HttpOnly sessions, CSRF checks, explicit role rules, and predictable API errors keep workflow boundaries clear.</p></article>
+        </div>
+      </section>
+      <section class="section architecture">
+        <div class="section-heading"><p class="eyebrow">Simple by design</p><h2>One product, three focused layers</h2></div>
+        <div class="architecture-flow" aria-label="Application architecture">
+          <div><strong>Next.js</strong><span>Public site and role-based workspaces</span></div><b aria-hidden="true">→</b>
+          <div><strong>FastAPI</strong><span>Scheduling, access rules, and API contracts</span></div><b aria-hidden="true">→</b>
+          <div><strong>SQLite</strong><span>Appointments, profiles, notes, and migrations</span></div>
+        </div>
+        <p class="quiet">Appointment times are interpreted in America/Los_Angeles and stored in UTC, including daylight-saving boundaries.</p>
+      </section>
+      <section id="screens" class="section screenshots">
+        <div class="section-heading"><p class="eyebrow">A closer look</p><h2>Designed for calm, focused work</h2></div>
+        <div class="shot-grid">
+          <figure class="wide"><img src="screenshots/public-home-desktop.png" alt="Aether Clinic public homepage on desktop" /><figcaption>Public homepage</figcaption></figure>
+          <figure><img src="screenshots/booking-flow-mobile.png" alt="Aether Clinic booking flow on a mobile screen" /><figcaption>Booking on mobile</figcaption></figure>
+          <figure><img src="screenshots/admin-crm-dashboard.png" alt="Administrator appointment and patient workspace" /><figcaption>Administration</figcaption></figure>
+          <figure><img src="screenshots/doctor-dashboard.png" alt="Doctor schedule workspace" /><figcaption>Doctor schedule</figcaption></figure>
+          <figure><img src="screenshots/patient-crm-record.png" alt="Patient appointment record and preferences" /><figcaption>Patient record</figcaption></figure>
+        </div>
+      </section>
+      <section id="run" class="section run">
+        <div><p class="eyebrow">Start here</p><h2>Run Aether Clinic locally</h2><p>Clone the repository, copy the environment examples, then start the frontend and API together with Docker Compose.</p></div>
+        <pre><code>git clone https://github.com/MaryanKostrubyak/li-site.git
+cd li-site
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+docker compose up --build</code></pre>
+        <p class="quiet">Open <code>http://localhost:3000</code>. The repository README includes local setup, test commands, and sample accounts.</p>
+      </section>
+    </main>
+    <footer><span>© 2026 Aether Clinic</span><span><a href="https://github.com/MaryanKostrubyak/li-site/blob/main/LICENSE">MIT License</a> · <a href="https://github.com/MaryanKostrubyak/li-site">GitHub</a></span></footer>
+  </body>
+</html>

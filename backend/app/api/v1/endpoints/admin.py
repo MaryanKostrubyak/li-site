@@ -1,11 +1,12 @@
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_role
+from app.core.deps import require_role, verify_csrf
+from app.core.errors import ApiError
 from app.db.session import get_db
 from app.models.appointment import Appointment
 from app.models.doctor_profile import DoctorProfile
@@ -19,13 +20,15 @@ from app.schemas.appointment import AdminAppointmentUpdateRequest, AppointmentOu
 from app.schemas.patient import (
     AddPatientInternalNoteRequest,
     AddPatientTagRequest,
+    AdminPatientUpdate,
     PatientCRMDetail,
     PatientInternalNoteOut,
     PatientSummary,
     PatientTagOut,
 )
 from app.services.notification_service import notification_service
-from app.services.scheduling import BookingConflictError, SlotUnavailableError, to_utc, validate_slot_available
+from app.services.appointment_rules import InvalidStatusTransition, validate_status_transition
+from app.services.scheduling import BookingConflictError, SlotUnavailableError, to_utc, validate_booking_slot
 
 router = APIRouter(prefix='/admin', tags=['admin'])
 
@@ -127,7 +130,7 @@ def list_admin_appointments(
     return result
 
 
-@router.post('/appointments', response_model=AppointmentOut)
+@router.post('/appointments', response_model=AppointmentOut, dependencies=[Depends(verify_csrf)])
 def create_manual_appointment(
     payload: ManualAppointmentCreateRequest,
     db: Annotated[Session, Depends(get_db)],
@@ -147,7 +150,7 @@ def create_manual_appointment(
 
     start_at = to_utc(payload.start_at)
     try:
-        end_at = validate_slot_available(db, doctor_id=doctor.id, start_at=start_at, duration_minutes=service.duration_minutes)
+        end_at = validate_booking_slot(db, doctor, service, start_at)
     except (SlotUnavailableError, BookingConflictError) as exc:
         raise HTTPException(status_code=409, detail=str(exc))
 
@@ -170,7 +173,7 @@ def create_manual_appointment(
     return appointment
 
 
-@router.patch('/appointments/{appointment_id}', response_model=AppointmentOut)
+@router.patch('/appointments/{appointment_id}', response_model=AppointmentOut, dependencies=[Depends(verify_csrf)])
 def update_appointment(
     appointment_id: str,
     payload: AdminAppointmentUpdateRequest,
@@ -186,14 +189,11 @@ def update_appointment(
 
     if payload.start_at or payload.doctor_id or payload.service_id:
         start_at = to_utc(payload.start_at or appointment.start_at)
+        doctor = db.get(DoctorProfile, doctor_id)
+        if not doctor or not service:
+            raise ApiError(status.HTTP_404_NOT_FOUND, 'resource_not_found', 'Doctor or service not found.')
         try:
-            end_at = validate_slot_available(
-                db,
-                doctor_id=doctor_id,
-                start_at=start_at,
-                duration_minutes=service.duration_minutes,
-                exclude_appointment_id=appointment.id,
-            )
+            end_at = validate_booking_slot(db, doctor, service, start_at, exclude_appointment_id=appointment.id)
         except (SlotUnavailableError, BookingConflictError) as exc:
             raise HTTPException(status_code=409, detail=str(exc))
         appointment.start_at = start_at
@@ -202,6 +202,10 @@ def update_appointment(
         appointment.service_id = service.id
 
     if payload.status:
+        try:
+            validate_status_transition(UserRole.admin, appointment.status, payload.status)
+        except InvalidStatusTransition as exc:
+            raise ApiError(status.HTTP_409_CONFLICT, 'invalid_status_transition', str(exc))
         appointment.status = payload.status
         if payload.status == AppointmentStatus.canceled:
             appointment.canceled_at = datetime.now(UTC)
@@ -280,7 +284,31 @@ def patient_detail(
     )
 
 
-@router.post('/patients/{patient_id}/tags', response_model=PatientTagOut)
+@router.patch('/patients/{patient_id}', response_model=PatientSummary, dependencies=[Depends(verify_csrf)])
+def update_patient(
+    patient_id: str,
+    payload: AdminPatientUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(require_role(UserRole.admin))],
+) -> PatientSummary:
+    patient = db.get(PatientProfile, patient_id)
+    if not patient:
+        raise ApiError(status.HTTP_404_NOT_FOUND, 'patient_not_found', 'Patient not found.')
+    patient.follow_up_status = payload.follow_up_status
+    db.commit()
+    db.refresh(patient)
+    return PatientSummary(
+        id=patient.id,
+        user_id=patient.user.id,
+        full_name=patient.user.full_name,
+        email=patient.user.email,
+        phone=patient.user.phone,
+        lead_source=patient.lead_source,
+        follow_up_status=patient.follow_up_status,
+    )
+
+
+@router.post('/patients/{patient_id}/tags', response_model=PatientTagOut, dependencies=[Depends(verify_csrf)])
 def add_patient_tag(
     patient_id: str,
     payload: AddPatientTagRequest,
@@ -298,7 +326,7 @@ def add_patient_tag(
     return PatientTagOut(id=tag.id, tag=tag.tag, created_at=tag.created_at)
 
 
-@router.post('/patients/{patient_id}/notes', response_model=PatientInternalNoteOut)
+@router.post('/patients/{patient_id}/notes', response_model=PatientInternalNoteOut, dependencies=[Depends(verify_csrf)])
 def add_patient_note(
     patient_id: str,
     payload: AddPatientInternalNoteRequest,

@@ -1,15 +1,17 @@
+import Link from 'next/link';
+
 export function SiteFooter() {
   return (
-    <footer className='section-rule bg-background/80'>
-      <div className='container-max grid gap-6 py-10 text-sm text-muted-foreground md:grid-cols-[1fr,1.4fr] md:items-end'>
+    <footer className='border-t border-border bg-[#EEE9DF]'>
+      <div className='container-max grid gap-8 py-12 md:grid-cols-[1fr,1fr]'>
         <div>
-          <p className='font-display text-lg font-semibold tracking-tight text-foreground'>Aether Clinic</p>
-          <p className='mt-2 max-w-sm leading-6'>Онлайн-запис, кабінет пацієнта, розклад лікаря і CRM для клініки.</p>
+          <p className='font-display text-xl'>Aether Clinic</p>
+          <p className='mt-3 max-w-md text-sm leading-6 text-muted-foreground'>Thoughtful appointments, clear scheduling, and care that fits into real life.</p>
         </div>
-        <div className='grid gap-2 text-xs uppercase tracking-[0.12em] sm:grid-cols-3 md:text-right'>
-          <p>Запис</p>
-          <p>Пацієнти</p>
-          <p>Розклад</p>
+        <div className='grid gap-3 text-sm md:justify-self-end md:text-right'>
+          <Link href='/book' className='font-bold'>Book a visit</Link>
+          <a href='mailto:hello@aetherclinic.test'>hello@aetherclinic.test</a>
+          <p className='text-muted-foreground'>Pacific Time · USD</p>
         </div>
       </div>
     </footer>
